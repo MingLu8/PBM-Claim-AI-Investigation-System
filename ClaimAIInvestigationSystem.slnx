@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/build-files/">
+    <File Path=".dockerignore" />
+    <File Path=".gitignore" />
+    <File Path="Directory.Packages.props" />
+    <File Path="docker-compose.yml" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/ApiGateway/ApiGateway.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PBM.Infrastructure.Tests/PBM.Infrastructure.Tests.csproj" Id="76fc7d74-b520-4f40-97cd-c1a2a37391c4" />
+  </Folder>
+</Solution>
