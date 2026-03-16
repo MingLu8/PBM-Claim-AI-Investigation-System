@@ -8,7 +8,7 @@ public class MyServiceIntegrationTests
         var builder = Kernel.CreateBuilder();
         // Register an "Assistant" that returns static text instead of calling an API
         builder.AddOpenAIChatCompletion(
-            modelId: "llama3.2:latest",
+            modelId: "llama3.2",
             apiKey: "anything", // API key is ignored by Ollama
             endpoint: new Uri("http://localhost:11434/v1"));
 

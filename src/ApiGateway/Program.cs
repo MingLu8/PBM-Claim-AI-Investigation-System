@@ -1,3 +1,4 @@
+using ApiGateway;
 using ApiGateway.Extensions;
 using ApiGateway.Modules;
 
@@ -7,6 +8,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddGatewayInfrastructure(builder.Configuration);
+builder.Services.AddHostedService<InvestigationWorker>();
 
 var app = builder.Build();
 app.UseGlobalExceptionHandler();
@@ -18,5 +20,4 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapClaimEndpoints();
-
-app.Run();
+await app.RunAsync();

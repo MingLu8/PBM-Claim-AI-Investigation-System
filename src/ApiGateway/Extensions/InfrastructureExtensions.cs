@@ -29,14 +29,18 @@ public static class InfrastructureExtensions
             return lazyConnection.Value;
         });
 
-        services.AddScoped(sp =>
+        services.AddTransient(sp =>
         {
             var kernelBuilder = Kernel.CreateBuilder();
             // Configure based on scoped data, e.g., user preferences
             kernelBuilder.AddOpenAIChatCompletion(
                 modelId: "llama3.2",
                 apiKey: "anything", // API key is ignored by Ollama
-                endpoint: new Uri("http://localhost:11434"));
+                endpoint: new Uri("http://localhost:11434/v1"));
+
+            kernelBuilder.Services.AddSingleton(sp.GetRequiredService<ILoggerFactory>().CreateLogger("Kernel"));
+            kernelBuilder.Services.AddSingleton(sp.GetRequiredService<IConfiguration>());
+
             return kernelBuilder.Build();
         });
 
