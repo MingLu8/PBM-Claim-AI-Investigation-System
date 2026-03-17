@@ -1,4 +1,5 @@
 ﻿using ApiGateway.ConfigurationSettings;
+using ApiGateway.Plugins;
 
 namespace ApiGateway.Extensions;
 
@@ -18,7 +19,7 @@ public static class InfrastructureExtensions
             options.ConnectRetry = 10;
             options.ReconnectRetryPolicy = new ExponentialRetry(5000); // Retry every 5s
 
-            // By using a Lazy wrapper, the 'Connect' method isn't called 
+            // By using a Lazy wrapper, the 'Connect' method isn't called
             // until the first time you call GetDatabase()
             var lazyConnection = new Lazy<ConnectionMultiplexer>(() =>
             {
@@ -37,6 +38,8 @@ public static class InfrastructureExtensions
                 modelId: "llama3.2",
                 apiKey: "anything", // API key is ignored by Ollama
                 endpoint: new Uri("http://localhost:11434/v1"));
+            kernelBuilder.Plugins.AddFromType<PharmacyNpiParserPlugin>("PharmacyNpiParser");
+            kernelBuilder.Plugins.AddFromType<CardHolderIdParserPlugin>("CardHolderIdParser");
 
             kernelBuilder.Services.AddSingleton(sp.GetRequiredService<ILoggerFactory>().CreateLogger("Kernel"));
             kernelBuilder.Services.AddSingleton(sp.GetRequiredService<IConfiguration>());
