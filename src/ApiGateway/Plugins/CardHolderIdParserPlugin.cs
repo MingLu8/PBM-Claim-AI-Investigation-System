@@ -1,10 +1,10 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 
 namespace ApiGateway.Plugins;
 
 public class CardHolderIdParserPlugin
 {
-    [KernelFunction("extract_cardholder_id")]
     [Description("Parses a raw NCPDP D0 claim string to extract the Member/Cardholder ID.")]
     public string ExtractCardholderId(
         [Description("The raw NCPDP telecom transaction string")] string ncpdpPayload)
@@ -24,17 +24,15 @@ public class CardHolderIdParserPlugin
         startIndex += fieldIdentifier.Length;
         ReadOnlySpan<char> remainingSpan = payloadSpan.Slice(startIndex);
 
-        // NCPDP fields are usually delimited by a group separator (GS), field separator (FS), 
-        // or segment separator. For this example, we'll assume a standard caret '^' or segment terminator '~'
+        // Standard segment/field separators in NCPDP
         int endIndex = remainingSpan.IndexOfAny('^', '~');
 
         if (endIndex == -1)
         {
-            // If no delimiter is found, assume it runs to the end of the string
             return remainingSpan.ToString();
         }
 
-        // Slice out exactly the ID and allocate a string only for the final result
+        // Keep allocation zero-copy until the final string return
         return remainingSpan.Slice(0, endIndex).ToString();
     }
 }

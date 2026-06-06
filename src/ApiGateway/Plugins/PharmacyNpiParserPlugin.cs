@@ -1,11 +1,9 @@
-﻿using Microsoft.SemanticKernel;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 
 namespace ApiGateway.Plugins;
 
 public class PharmacyNpiParserPlugin
 {
-    [KernelFunction("extract_npi_from_ncpdp")]
     [Description("Parses a raw NCPDP D0 claim string to extract the 10-digit Pharmacy NPI.")]
     public string ExtractPharmacyNpi(
         [Description("The raw NCPDP telecom transaction string")] string ncpdpPayload)

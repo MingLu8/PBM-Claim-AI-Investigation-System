@@ -1,10 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Confluent.Kafka;
+using Microsoft.AspNetCore.Mvc;
 
-namespace ApiGateway.Modules;
+namespace ApiGateway.Endpoints;
 
-public static class ClaimsModule
+public class ClaimsEndpoint : IEndpoint
 {
-    public static void MapClaimEndpoints(this IEndpointRouteBuilder app)
+    public void MapEndpoint(IEndpointRouteBuilder app)
     {
         app.MapPost("/adjudicate", AdjudicateClaim)
            .WithName("AdjudicateClaim")
@@ -12,7 +13,7 @@ public static class ClaimsModule
            .WithDescription("Accepts raw NCPDP D.0 string, processes it via Kafka, and returns the response.");
     }
 
-    private static async Task<IResult> AdjudicateClaim(
+    private async Task<IResult> AdjudicateClaim(
         [FromBody] string ncpdp,
         HttpContext ctx,
         ILoggerFactory loggerFactory,
@@ -51,4 +52,5 @@ public static class ClaimsModule
             return Results.StatusCode(500);
         }
     }
+
 }
