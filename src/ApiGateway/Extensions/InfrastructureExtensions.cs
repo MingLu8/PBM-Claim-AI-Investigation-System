@@ -33,8 +33,8 @@ public static class InfrastructureExtensions
 
         // 1. Register the underlying Plugin/Tool instances as Scoped
         // This allows the plugins themselves to use DI for DB contexts or HttpClient
-        services.AddScoped<PharmacyNpiParserPlugin>();
-        services.AddScoped<CardHolderIdParserPlugin>();
+        services.AddScoped<PharmacyNpiParser>();
+        services.AddScoped<CardHolderIdParser>();
 
         // 2. Register the IChatClient Pipeline
         services.AddChatClient(services =>
@@ -55,8 +55,8 @@ public static class InfrastructureExtensions
             var chatClient = sp.GetRequiredService<IChatClient>();
 
             // Resolve plugins from DI and convert to Tools
-            var npiPlugin = sp.GetRequiredService<PharmacyNpiParserPlugin>();
-            var cardPlugin = sp.GetRequiredService<CardHolderIdParserPlugin>();
+            var npiPlugin = sp.GetRequiredService<PharmacyNpiParser>();
+            var cardPlugin = sp.GetRequiredService<CardHolderIdParser>();
 
             return new ChatClientAgent(
                 chatClient,

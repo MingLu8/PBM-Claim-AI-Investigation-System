@@ -2,7 +2,7 @@
 
 namespace ApiGateway.Plugins;
 
-public class PharmacyNpiParserPlugin
+public class PharmacyNpiParser
 {
     [Description("Parses a raw NCPDP D0 claim string to extract the 10-digit Pharmacy NPI.")]
     public string ExtractPharmacyNpi(

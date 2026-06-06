@@ -35,19 +35,6 @@ public class ChatEndpoint : IEndpoint
         {
             var rawClaim = "HEADDATA...201-B11234567890...TAILDATA";
             prompt = $"I have a flagged claim payload: {rawClaim}. What is the pharmacy NPI?";
-
-            //agent.RunAsync(prompt, settings, token).ContinueWith(task =>
-            //{
-            //    if (task.IsCompletedSuccessfully)
-            //    {
-            //        var response = task.Result;
-            //        logger.LogInformation("Agent response: {Response}", response);
-            //    }
-            //    else if (task.IsFaulted)
-            //    {
-            //        logger.LogError(task.Exception, "Agent execution failed.");
-            //    }
-            //}, token);
             var response = await _agent.RunAsync(prompt);
 
             return Results.Ok(new { message = response.Text });

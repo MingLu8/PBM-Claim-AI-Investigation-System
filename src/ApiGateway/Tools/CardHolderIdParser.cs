@@ -3,7 +3,7 @@ using System.ComponentModel;
 
 namespace ApiGateway.Plugins;
 
-public class CardHolderIdParserPlugin
+public class CardHolderIdParser
 {
     [Description("Parses a raw NCPDP D0 claim string to extract the Member/Cardholder ID.")]
     public string ExtractCardholderId(
