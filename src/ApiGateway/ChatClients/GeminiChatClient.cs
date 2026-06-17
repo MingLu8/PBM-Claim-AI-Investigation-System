@@ -3,7 +3,7 @@
 namespace ApiGateway.ChatClients;
 
 // Custom IChatClient wrapper handling the underlying API payload nuances
-public class GeminiChatClient : IChatClient
+public partial class GeminiChatClient : IChatClient
 {
     private readonly HttpClient _httpClient = new();
     private readonly string _apiKey;
@@ -17,34 +17,66 @@ public class GeminiChatClient : IChatClient
     }
 
     public ChatClientMetadata Metadata { get; }
-    public async Task<ChatResponse> GetResponseAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public async Task<ChatResponse> GetResponseAsync(
+    IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+    ChatOptions? options = null,
+    CancellationToken cancellationToken = default)
     {
+        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
 
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
+        // Gemini handles system prompts via a dedicated field, NOT a user turn.
+        // Pull them out instead of mapping System -> user.
+        var systemText = string.Join(
+            "\n",
+            messages.Where(m => m.Role == ChatRole.System)
+                    .Select(m => m.Text)
+                    .Where(t => !string.IsNullOrEmpty(t)));
 
-        // Critical conversion step: Gemini strictly expects "user" or "model" roles.
-        // Microsoft Agent Framework defaults to System/User/Assistant.
-        var geminiContents = new List<GeminiContent>();
-        foreach (var msg in messages)
-        {
-            string mappedRole = msg.Role == ChatRole.Assistant ? "model" : "user";
-            geminiContents.Add(new GeminiContent
+        var geminiContents = messages
+            .Where(m => m.Role != ChatRole.System)
+            .Select(m => new GeminiContent
             {
-                Role = mappedRole,
-                Parts = [new GeminiPart { Text = msg.Text ?? string.Empty }]
-            });
+                Role = m.Role == ChatRole.Assistant ? "model" : "user",
+                Parts = [new GeminiPart { Text = m.Text ?? string.Empty }]
+            })
+            .ToList();
+
+        var requestBody = new GeminiRequest
+        {
+            Contents = geminiContents,
+            SystemInstruction = string.IsNullOrEmpty(systemText)
+                ? null
+                : new GeminiContent { Parts = [new GeminiPart { Text = systemText }] }
+        };
+
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url)
+        {
+            Content = JsonContent.Create(requestBody)
+        };
+        httpRequest.Headers.Add("x-goog-api-key", _apiKey); // out of the query string
+
+        var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            // Gemini puts the real reason in the body; EnsureSuccessStatusCode hides it.
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new HttpRequestException(
+                $"Gemini request failed ({(int)response.StatusCode}) for model '{_model}': {error}");
         }
 
-        var requestBody = new GeminiRequest { Contents = geminiContents };
-        var response = await _httpClient.PostAsJsonAsync(url, requestBody, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        var geminiResponse = await response.Content
+            .ReadFromJsonAsync<GeminiResponse>(cancellationToken: cancellationToken);
 
-        var geminiResponse = await response.Content.ReadFromJsonAsync<GeminiResponse>(cancellationToken: cancellationToken);
-        string replyText = geminiResponse?.Candidates?[0].Content?.Parts?[0].Text ?? "No response generated.";
+        string replyText =
+            geminiResponse?.Candidates is { Count: > 0 } candidates
+            && candidates[0].Content?.Parts is { Count: > 0 } parts
+                ? parts[0].Text ?? "No response generated."
+                : "No response generated.";
 
-        return new ChatResponse(new Microsoft.Extensions.AI.ChatMessage(ChatRole.Assistant, replyText));
+        return new ChatResponse(
+            new Microsoft.Extensions.AI.ChatMessage(ChatRole.Assistant, replyText));
     }
-
 
     public object? GetService(Type serviceType, object? serviceKey = null) => serviceType.IsInstanceOfType(this) ? this : null;
     public void Dispose() => _httpClient.Dispose();
@@ -54,11 +86,4 @@ public class GeminiChatClient : IChatClient
     {
         throw new NotImplementedException();
     }
-
-    // Internal payload representations for Google Gemini REST mapping
-    private class GeminiRequest { [JsonPropertyName("contents")] public List<GeminiContent> Contents { get; set; } = []; }
-    private class GeminiContent { [JsonPropertyName("role")] public string Role { get; set; } = string.Empty; [JsonPropertyName("parts")] public List<GeminiPart> Parts { get; set; } = []; }
-    private class GeminiPart { [JsonPropertyName("text")] public string Text { get; set; } = string.Empty; }
-    private class GeminiResponse { [JsonPropertyName("candidates")] public List<GeminiCandidate>? Candidates { get; set; } }
-    private class GeminiCandidate { [JsonPropertyName("content")] public GeminiContent? Content { get; set; } }
 }
