@@ -1,0 +1,10 @@
+﻿global using Microsoft.Agents.AI;
+global using Microsoft.Extensions.AI;
+global using OpenAI;
+global using System;
+global using System.Collections.Generic;
+global using System.Net.Http;
+global using System.Net.Http.Json;
+global using System.Text.Json;
+global using System.Text.Json.Serialization;
+global using System.Threading.Tasks;

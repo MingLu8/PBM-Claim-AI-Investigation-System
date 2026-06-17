@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using ApiGateway.Dtos;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ApiGateway.Endpoints;
 
@@ -25,7 +26,7 @@ public class ChatEndpoint : IEndpoint
     }
 
     private async Task<IResult> Chat(
-        [FromBody] string prompt,
+        [FromBody] ChatRequest request,
         CancellationToken token)
     {
         _logger.LogInformation("InvestigationWorker is starting.");
@@ -33,9 +34,9 @@ public class ChatEndpoint : IEndpoint
 
         try
         {
-            var rawClaim = "HEADDATA...201-B11234567890...TAILDATA";
-            prompt = $"I have a flagged claim payload: {rawClaim}. What is the pharmacy NPI?";
-            var response = await _agent.RunAsync(prompt);
+            //var rawClaim = "HEADDATA...201-B11234567890...TAILDATA";
+            //request.Prompt = $"I have a flagged claim payload: {rawClaim}. What is the pharmacy NPI?";
+            var response = await _agent.RunAsync(request.Prompt);
 
             return Results.Ok(new { message = response.Text });
 

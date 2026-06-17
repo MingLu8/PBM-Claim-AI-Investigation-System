@@ -8,7 +8,7 @@ public static class InfrastructureExtensions
 {
     public static IServiceCollection AddGatewayInfrastructure(this IServiceCollection services, IConfiguration config)
     {
-        //services.AddAppSettings<RedisSettings>(config, "Redis");
+        var redisSettings = services.AddAppSettings<RedisSettings>(config, "Redis");
 
         services.AddSingleton<IConnectionMultiplexer>(sp =>
         {
@@ -61,7 +61,7 @@ public static class InfrastructureExtensions
             return new ChatClientAgent(
                 chatClient,
                 name: "PharmacyParserAgent",
-                instructions: "You are a PBM assistant. Use tools to extract NPIs and Member IDs.",
+                instructions: "You are a PBM assistant. Use tools to extract NPIs and Member IDs. If a tool is not found to answer a question, use general PBM knowledge to answer questions, such as 'What is NDC?'",
                 tools: new List<AITool>
                 {
                     AIFunctionFactory.Create(npiPlugin.ExtractPharmacyNpi, name: "extract_pharmacy_npi"),
