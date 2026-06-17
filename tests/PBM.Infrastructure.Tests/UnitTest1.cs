@@ -1,27 +1,27 @@
-﻿//namespace PBM.Infrastructure.Tests;
+﻿namespace PBM.Infrastructure.Tests;
 
-//public class MyServiceIntegrationTests
-//{
-//    [Fact]
-//    public async Task DoWork_WithRealKernel_ReturnsExpectedResult()
-//    {
-//        var builder = Kernel.CreateBuilder();
-//        // Register an "Assistant" that returns static text instead of calling an API
-//        builder.AddOpenAIChatCompletion(
-//            modelId: "llama3.2",
-//            apiKey: "anything", // API key is ignored by Ollama
-//            endpoint: new Uri("http://localhost:11434/v1"));
+public class MyServiceIntegrationTests
+{
+    //[Fact]
+    //public async Task DoWork_WithRealKernel_ReturnsExpectedResult()
+    //{
+    //    var builder = Kernel.CreateBuilder();
+    //    // Register an "Assistant" that returns static text instead of calling an API
+    //    builder.AddOpenAIChatCompletion(
+    //        modelId: "llama3.2",
+    //        apiKey: "anything", // API key is ignored by Ollama
+    //        endpoint: new Uri("http://localhost:11434/v1"));
 
-//        var kernel = builder.Build();
-//        var service = new MyService(kernel);
+    //    var kernel = builder.Build();
+    //    var service = new MyService(kernel);
 
-//        // Act
-//        var result = await service.DoWork();
+    //    // Act
+    //    var result = await service.DoWork();
 
-//        // Assert: Verify business logic based on the fake AI response
-//        Assert.NotNull(result);
-//    }
-//}
+    //    // Assert: Verify business logic based on the fake AI response
+    //    Assert.NotNull(result);
+    //}
+}
 
 //public class MyService
 //{
