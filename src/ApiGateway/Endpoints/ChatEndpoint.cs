@@ -19,7 +19,7 @@ public class ChatEndpoint : IEndpoint
 
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapPost("/chat", Chat)
+        app.MapPost("/api/chat", Chat)
            .WithName("Chat")
            .WithSummary("Chat with the AI model")
            .WithDescription("Sends a message to the AI model and returns the response.");
@@ -27,6 +27,7 @@ public class ChatEndpoint : IEndpoint
 
     private async Task<IResult> Chat(
         [FromBody] ChatRequest request,
+        ChatClientAgent agent,
         CancellationToken token)
     {
         _logger.LogInformation("InvestigationWorker is starting.");
@@ -36,7 +37,7 @@ public class ChatEndpoint : IEndpoint
         {
             //var rawClaim = "HEADDATA...201-B11234567890...TAILDATA";
             //request.Prompt = $"I have a flagged claim payload: {rawClaim}. What is the pharmacy NPI?";
-            var response = await _agent.RunAsync(request.Prompt);
+            var response = await agent.RunAsync(request.ChatMessage.Content);
 
             return Results.Ok(new { message = response.Text });
 

@@ -37,17 +37,17 @@ public static class InfrastructureExtensions
         services.AddScoped<CardHolderIdParser>();
 
         // 2. Register the IChatClient Pipeline
-        services.AddChatClient(services =>
-        {
-            // Configure the base Ollama/OpenAI connection
-            var options = new OpenAIClientOptions { Endpoint = new Uri("http://localhost:11434/v1") };
-            var baseClient = new OpenAI.Chat.ChatClient("llama3.2", new ApiKeyCredential("ollama"), options);
+        //services.AddChatClient(services =>
+        //{
+        //    // Configure the base Ollama/OpenAI connection
+        //    var options = new OpenAIClientOptions { Endpoint = new Uri("http://localhost:11434/v1") };
+        //    var baseClient = new OpenAI.Chat.ChatClient("llama3.2", new ApiKeyCredential("ollama"), options);
 
-            return baseClient.AsIChatClient()
-                .AsBuilder()
-                .UseFunctionInvocation() // CRITICAL: This enables the agent to actually CALL your plugins
-                .Build();
-        });
+        //    return baseClient.AsIChatClient()
+        //        .AsBuilder()
+        //        .UseFunctionInvocation() // CRITICAL: This enables the agent to actually CALL your plugins
+        //        .Build();
+        //});
 
         // 3. Register the Agent itself
         services.AddScoped<ChatClientAgent>(sp =>

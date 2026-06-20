@@ -4,6 +4,25 @@ namespace ApiGateway.Dtos;
 
 public class ChatRequest
 {
-    [property: DefaultValue("Analyze this raw NCPDP claim: 302-C2^~")]
-    public string Prompt { get; set; }
+    public Guid SessionId { get; }
+    public ChatMessage ChatMessage { get; }
+    public ChatRequest(ChatMessage chatMessage, Guid sessionId)
+    {
+        ChatMessage = chatMessage;
+        SessionId = sessionId;
+    }
+}
+
+public class ChatMessage
+{
+    public ChatMessage(Guid id, string role, string content)
+    {
+        Id = id;
+        Role = role;
+        Content = content;
+    }
+
+    public Guid Id { get; }
+    public string Role { get; }
+    public string Content { get; }
 }
