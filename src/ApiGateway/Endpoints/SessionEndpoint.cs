@@ -1,28 +1,68 @@
 ﻿using ApiGateway.Dtos;
+using ApiGateway.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ApiGateway.Endpoints;
 
 public class SessionEndpoint : IEndpoint
 {
-    private readonly ChatClientAgent _agent;
+    private readonly ICurrentUser _user;
+    private readonly ISessionStore _store;
     private readonly ILogger<SessionEndpoint> _logger;
 
     public SessionEndpoint(
-        //ICurrentUser user,
-        //ISessionStore store,
+        ICurrentUser user,
+        ISessionStore store,
         ILogger<SessionEndpoint> logger
         )
     {
+        _user = user;
+        _store = store;
         _logger = logger;
     }
 
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
         app.MapPost("/api/session", CreateSessionAsync)
-           .WithName("Session")
+           .WithName("CreateSession")
            .WithSummary("Create a chat session")
            .WithDescription("Create a chat session.");
+
+        app.MapGet("/api/sessions", GetSessionsAsync)
+           .WithName("GetSessions")
+           .WithSummary("Get all chat sessions for user")
+           .WithDescription("Get all chat sessions for user.");
+
+        app.MapGet("/api/sessions/{id}", GetSessionAsync)
+          .WithName("GetSession")
+          .WithSummary("Get chat session by id")
+          .WithDescription("Get chat session by id.");
+    }
+
+    private async Task<IResult> GetSessionAsync(string id)
+    {
+        var session = await _store.GetAsync(id);
+        if (session == null) return Results.NotFound(new { error = "Session not found." });
+
+        if (!string.IsNullOrEmpty(session.User) && session.User != _user.UserId)
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+
+        return Results.Ok(session);
+    }
+
+    private async Task<IResult> GetSessionsAsync()
+    {
+        if (string.IsNullOrEmpty(_user.UserId)) return Results.Ok(Enumerable.Empty<SessionSummary>());
+
+        var sessions = await _store.GetAllAsync(_user.UserId);
+        var summaries = sessions.Where(a => a.History.Count() > 0)
+            .Select(a =>
+            {
+                var firstUser = a.History.FirstOrDefault(b => b.Role == "user")?.Content ?? "New chat";
+                var title = firstUser.Length > 60 ? firstUser[..60] + "..." : firstUser;
+                return new SessionSummary(a.Id, title, a.LastAccessAt, a.History.Count());
+            }).ToList();
+        return Results.Ok(sessions);
     }
 
     private async Task<IResult> CreateSessionAsync(
@@ -30,14 +70,10 @@ public class SessionEndpoint : IEndpoint
         CancellationToken token)
     {
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var session = new SessionData
-        {
-            Id = Guid.NewGuid().ToString(),
-            CreatedAt = now,
-            LastAccessedAt = now,
-            UserSub = "Ming"
-        };
-
+        var session = new SessionData(Guid.NewGuid().ToString(), now, now, _user.Sub ?? _user.Email, Enumerable.Empty<ChatTurn>());
+        await _store.SetASync(session);
         return Results.Ok(new SessionResponse(session.Id));
     }
+
+
 }

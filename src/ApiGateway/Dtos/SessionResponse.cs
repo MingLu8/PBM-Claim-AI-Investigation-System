@@ -1,4 +1,4 @@
-﻿namespace ApiGateway.Endpoints
+﻿namespace ApiGateway.Dtos
 {
     public class SessionResponse
     {
