@@ -37,6 +37,23 @@ public class SessionEndpoint : IEndpoint
           .WithName("GetSession")
           .WithSummary("Get chat session by id")
           .WithDescription("Get chat session by id.");
+
+        app.MapDelete("/api/sessions/{id}", DeleteSessionAsync)
+          .WithName("DeleteSession")
+          .WithSummary("Delete chat session by id")
+          .WithDescription("Delete chat session by id.");
+    }
+
+    private async Task<IResult> DeleteSessionAsync(string id)
+    {
+        var session = await _store.GetAsync(id);
+        if (session is null) return Results.NotFound(new { error = "Session not found." });
+
+        if (session.User != _user.UserId)
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+
+        await _store.DeleteAsync(id);
+        return Results.NoContent();
     }
 
     private async Task<IResult> GetSessionAsync(string id)
@@ -52,7 +69,7 @@ public class SessionEndpoint : IEndpoint
 
     private async Task<IResult> GetSessionsAsync()
     {
-        if (string.IsNullOrEmpty(_user.UserId)) return Results.Ok(Enumerable.Empty<SessionSummary>());
+        //if (string.IsNullOrEmpty(_user.UserId)) return Results.Ok(Enumerable.Empty<SessionSummary>());
 
         var sessions = await _store.GetAllAsync(_user.UserId);
         var summaries = sessions.Where(a => a.History.Count() > 0)

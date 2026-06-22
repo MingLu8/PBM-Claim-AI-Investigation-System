@@ -47,5 +47,13 @@ namespace ApiGateway.Services
             if (!string.IsNullOrEmpty(sessionData.User))
                 await _db.SetAddAsync(UserIndex(sessionData.User), sessionData.Id);
         }
+
+        public async Task DeleteAsync(string id)
+        {
+            var s = await GetAsync(id);
+            await _db.KeyDeleteAsync(Key(id));
+            if (!s?.User.IsWhiteSpace() ?? false)
+                await _db.SetRemoveAsync(UserIndex(s!.User!), id);
+        }
     }
 }

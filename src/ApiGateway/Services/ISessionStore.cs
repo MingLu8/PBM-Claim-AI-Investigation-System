@@ -6,6 +6,7 @@ namespace ApiGateway.Services
     public interface ISessionStore
     {
         Task<SessionData?> GetAsync(string id);
+        Task DeleteAsync(string id);
         Task<bool> ExistsAsync(string id);
         Task SetASync(SessionData sessionData);
         Task<IEnumerable<SessionData>> GetAllAsync(string user);

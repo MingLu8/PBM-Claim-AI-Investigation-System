@@ -6,6 +6,13 @@ namespace ApiGateway.Services
     public sealed class InMemorySessionStore : ISessionStore
     {
         private readonly ConcurrentDictionary<string, SessionData> _store = new();
+
+        public Task DeleteAsync(string id)
+        {
+            _store.TryRemove(id, out var _);
+            return Task.CompletedTask;
+        }
+
         public Task<bool> ExistsAsync(string id) => Task.FromResult(_store.ContainsKey(id));
         public Task<IEnumerable<SessionData>> GetAllAsync(string user)
         {
