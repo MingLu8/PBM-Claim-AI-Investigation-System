@@ -1,4 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<UserSecretsId>7b6d9a90-be27-42a1-9a9d-cd662f13643d</UserSecretsId>
+	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Confluent.Kafka" />
 		<PackageReference Include="Microsoft.Agents.AI" />
@@ -13,10 +19,4 @@
 	<ItemGroup>
 	  <Folder Include="Abstractions\" />
 	</ItemGroup>
-	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
-		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<UserSecretsId>7b6d9a90-be27-42a1-9a9d-cd662f13643d</UserSecretsId>
-	</PropertyGroup>
 </Project>

@@ -1,29 +1,75 @@
 ﻿using ApiGateway.ChatClients;
+using ApiGateway.ConfigurationSettings;
 using ApiGateway.Extensions;
+using ApiGateway.Plugins;
 using ApiGateway.Services;
 
 namespace ApiGateway;
 
 public static class DependencyResolution
 {
-    public static IServiceCollection AddGeminiChatClient(this IServiceCollection services, IConfiguration config)
+    public static IServiceCollection AddApplicationDependencies(this IServiceCollection services, IConfiguration config)
     {
         services.AddHttpClient();
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, CurrentUser>();
 
-        var settings = services.AddAppSettings<GeminiSettings>(config, "Gemini");
-        services.AddTransient<IChatClient, GeminiChatClient>();
+        var redisSettings = services.AddAppSettings<RedisSettings>(config, "Redis");
+        var memorySettings = services.AddAppSettings<MemoryOptions>(config, "memory");
+        var geminiSettings = services.AddAppSettings<GeminiSettings>(config, "Gemini");
 
-        var redisConn = config["Redis:ConnectionString"];
-        if (!string.IsNullOrWhiteSpace(redisConn))
+        services.AddSingleton<IConnectionMultiplexer>(sp =>
         {
-            services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisConn));
+            var options = ConfigurationOptions.Parse(redisSettings.ConnectionString);
+
+            // We set these to ensure that even when it eventually connects, it doesn't panic
+            options.AbortOnConnectFail = false;
+            options.ConnectRetry = 10;
+            options.ReconnectRetryPolicy = new ExponentialRetry(5000); // Retry every 5s
+
+            // By using a Lazy wrapper, the 'Connect' method isn't called
+            // until the first time you call GetDatabase()
+            var lazyConnection = new Lazy<ConnectionMultiplexer>(() =>
+            {
+                Console.WriteLine($"[Redis] Executing delayed connection to {redisSettings.ConnectionString}...");
+                return ConnectionMultiplexer.Connect(options);
+            });
+
+            return lazyConnection.Value;
+        });
+
+        if (!string.IsNullOrWhiteSpace(redisSettings.ConnectionString))
             services.AddSingleton<ISessionStore, RedisSessionStore>();
-        }
         else
             services.AddSingleton<ISessionStore, InMemorySessionStore>();
 
+        services.AddScoped<IEmbedder, GeminiEmbedder>();
+        services.AddScoped<IRagSearch, InMemoryRagSearch>();
+        services.AddScoped<PharmacyNpiParser>();
+        services.AddScoped<CardHolderIdParser>();
+        services.AddScoped<RecallMemoryTool>();
+
+        services.AddTransient<IChatClient, GeminiChatClient>();
+        services.AddScoped(sp =>
+        {
+            var chatClient = sp.GetRequiredService<IChatClient>();
+
+            // Resolve plugins from DI and convert to Tools
+            var npiPlugin = sp.GetRequiredService<PharmacyNpiParser>();
+            var cardPlugin = sp.GetRequiredService<CardHolderIdParser>();
+            var memoryTool = sp.GetRequiredService<RecallMemoryTool>();
+
+            return new ChatClientAgent(
+                chatClient,
+                name: "PharmacyParserAgent",
+                instructions: $"You are a PBM assistant. You have memory use {memoryTool.Definition.FunctionName} tool to retrieve facts, Use tools to extract NPIs and Member IDs. If a tool is not found to answer a question, use general PBM knowledge to answer questions, such as 'What is NDC?'",
+                tools: new List<AITool>
+                {
+                    AIFunctionFactory.Create(npiPlugin.ExtractPharmacyNpi, name: "extract_pharmacy_npi"),
+                    AIFunctionFactory.Create(cardPlugin.ExtractCardholderId, name: "extract_cardholder_id"),
+                    AIFunctionFactory.Create(memoryTool.InvokeAsync, name: memoryTool.Definition.FunctionName, memoryTool.Definition.FunctionDescription)
+                });
+        });
         return services;
     }
 }

@@ -6,8 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddGeminiChatClient(builder.Configuration);
-builder.Services.AddGatewayInfrastructure(builder.Configuration);
+builder.Services.AddApplicationDependencies(builder.Configuration);
 builder.Services.AddHostedService<InvestigationWorker>();
 builder.Services.AddEndpoints(typeof(Program).Assembly);
 var app = builder.Build();
