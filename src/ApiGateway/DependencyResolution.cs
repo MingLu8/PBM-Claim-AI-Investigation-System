@@ -3,6 +3,7 @@ using ApiGateway.ConfigurationSettings;
 using ApiGateway.Extensions;
 using ApiGateway.Plugins;
 using ApiGateway.Services;
+using Microsoft.Extensions.AI;
 
 namespace ApiGateway;
 
@@ -17,6 +18,7 @@ public static class DependencyResolution
         var redisSettings = services.AddAppSettings<RedisSettings>(config, "Redis");
         var memorySettings = services.AddAppSettings<MemoryOptions>(config, "memory");
         var geminiSettings = services.AddAppSettings<GeminiSettings>(config, "Gemini");
+        var ollamaSettings = services.AddAppSettings<OllamaSettings>(config, "Ollama");
 
         services.AddSingleton<IConnectionMultiplexer>(sp =>
         {
@@ -49,7 +51,20 @@ public static class DependencyResolution
         services.AddScoped<CardHolderIdParser>();
         services.AddScoped<RecallMemoryTool>();
 
-        services.AddTransient<IChatClient, GeminiChatClient>();
+        services.AddTransient<GeminiChatClient>();
+        services.AddTransient<IChatClient>(sp =>
+        {
+            var primary = sp.GetRequiredService<GeminiChatClient>();
+            var ollama = new OllamaChatClient(
+                new Uri(ollamaSettings.Endpoint),
+                modelId: ollamaSettings.Model);
+            return new FallbackChatClient(
+                primary,
+                ollama,
+                sp.GetRequiredService<ILogger<FallbackChatClient>>(),
+                primaryName: "Gemini",
+                fallbackName: $"Ollama ({ollamaSettings.Model})");
+        });
         services.AddScoped(sp =>
         {
             var chatClient = sp.GetRequiredService<IChatClient>();
