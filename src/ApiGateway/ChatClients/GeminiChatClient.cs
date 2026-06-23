@@ -36,12 +36,18 @@ public partial class GeminiChatClient : IChatClient
         var messageList = messages as IReadOnlyList<AIChatMessage> ?? messages.ToList();
 
         // Gemini handles system prompts via a dedicated field, NOT a user turn.
-        // Pull them out instead of mapping System -> user.
-        var systemText = string.Join(
-            "\n",
+        // Pull them out instead of mapping System -> user. The agent's own instructions arrive
+        // via ChatOptions.Instructions (NOT as a System message), so merge them in too — otherwise
+        // the agent's system prompt is silently dropped and Gemini answers with no context.
+        var systemParts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(options?.Instructions))
+            systemParts.Add(options.Instructions);
+        systemParts.AddRange(
             messageList.Where(m => m.Role == ChatRole.System)
                        .Select(m => m.Text)
                        .Where(t => !string.IsNullOrEmpty(t)));
+
+        var systemText = string.Join("\n", systemParts);
 
         var geminiContents = BuildContents(messageList);
 

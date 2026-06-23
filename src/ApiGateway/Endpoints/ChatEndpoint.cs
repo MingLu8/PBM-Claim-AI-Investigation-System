@@ -46,19 +46,25 @@ public class ChatEndpoint : IEndpoint
 
             var messages = new List<AIChatMessage>();
 
-            // 1. Cross-session memory: recall relevant facts from the user's OTHER sessions and
-            //    inject them so the model "remembers" across conversations (deterministic RAG).
+            // 1. Always inject cross-session memory status so the model never claims it has no
+            //    memory capability — even an empty result tells it "nothing was found" rather
+            //    than leaving it with no context at all.
             if (memory.IsEnabled)
             {
                 var snippets = await memory.RecallSnippetsAsync(userInput, excludeSessionId: sessionId, token);
+                string memoryText;
                 if (snippets.Count > 0)
                 {
-                    var memoryText =
-                        "Relevant facts recalled from this user's earlier conversations:\n" +
-                        string.Join("\n", snippets.Select(s => "- " + s));
-                    messages.Add(new AIChatMessage(ChatRole.System, memoryText));
+                    memoryText = "MEMORY (from this user's earlier sessions):\n" +
+                                 string.Join("\n", snippets.Select(s => "- " + s));
                     _logger.LogInformation("[Memory] Injected {Count} recalled snippet(s) into chat context.", snippets.Count);
                 }
+                else
+                {
+                    memoryText = "MEMORY: No relevant facts found in this user's past sessions for this query.";
+                    _logger.LogInformation("[Memory] No snippets recalled for query.");
+                }
+                messages.Add(new AIChatMessage(ChatRole.System, memoryText));
             }
 
             // 2. Replay this session's own history for in-conversation continuity.

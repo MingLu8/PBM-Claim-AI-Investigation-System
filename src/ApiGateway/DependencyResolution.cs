@@ -77,7 +77,24 @@ public static class DependencyResolution
             return new ChatClientAgent(
                 chatClient,
                 name: "PharmacyParserAgent",
-                instructions: $"You are a PBM assistant. You have memory use {memoryTool.Definition.FunctionName} tool to retrieve facts, Use tools to extract NPIs and Member IDs. If a tool is not found to answer a question, use general PBM knowledge to answer questions, such as 'What is NDC?'",
+                instructions: $"""
+                    You are a PBM (Pharmacy Benefit Management) assistant.
+
+                    MEMORY: Before each message you receive, the system automatically searches this user's past sessions
+                    and injects the results as a MEMORY block in the system context. ALWAYS read that block to answer
+                    questions about past conversations. You DO have memory — never claim otherwise.
+                    - If the MEMORY block contains relevant facts, use them to answer.
+                    - If the MEMORY block says "No relevant facts found", tell the user you couldn't find that
+                      information in their past sessions (do NOT say you have no memory capability).
+                    - You can also call '{memoryTool.Definition.FunctionName}' at any time to search memory with a
+                      different query if the injected context is insufficient.
+
+                    TOOLS: Use extract_pharmacy_npi to identify pharmacy NPI numbers and extract_cardholder_id to
+                    identify member/cardholder IDs from text.
+
+                    KNOWLEDGE: For PBM questions not covered by a tool (e.g. "What is NDC?"), use your general PBM
+                    knowledge to answer.
+                    """,
                 tools: new List<AITool>
                 {
                     AIFunctionFactory.Create(npiPlugin.ExtractPharmacyNpi, name: "extract_pharmacy_npi"),
