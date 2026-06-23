@@ -67,9 +67,31 @@ public static class DependencyResolution
                 {
                     AIFunctionFactory.Create(npiPlugin.ExtractPharmacyNpi, name: "extract_pharmacy_npi"),
                     AIFunctionFactory.Create(cardPlugin.ExtractCardholderId, name: "extract_cardholder_id"),
-                    AIFunctionFactory.Create(memoryTool.InvokeAsync, name: memoryTool.Definition.FunctionName, memoryTool.Definition.FunctionDescription)
+                    AIFunctionFactory.Create(memoryTool.RecallAsync, name: memoryTool.Definition.FunctionName, description: memoryTool.Definition.FunctionDescription)
                 });
         });
+
+        var embeddingDims = config.GetValue<int?>("Embeddings:Dimensions") ?? 256;
+        switch (config["Embeddings:Provider"]?.Trim().ToLowerInvariant())
+        {
+            case "inmemory":
+                services.AddSingleton<IEmbedder>(_ => new InMemoryEmbedder(embeddingDims));
+                break;
+            case "azure":
+                services.AddSingleton<AzureOpenAIEmbedder>();
+                services.AddSingleton<IEmbedder>(sp => new FallbackEmbedder(
+                    sp.GetRequiredService<AzureOpenAIEmbedder>(),
+                    new InMemoryEmbedder(embeddingDims),
+                    sp.GetRequiredService<ILogger<FallbackEmbedder>>()));
+                break;
+            default: // "gemini"
+                services.AddSingleton<GeminiEmbedder>();
+                services.AddSingleton<IEmbedder>(sp => new FallbackEmbedder(
+                    sp.GetRequiredService<GeminiEmbedder>(),
+                    new InMemoryEmbedder(embeddingDims),
+                    sp.GetRequiredService<ILogger<FallbackEmbedder>>()));
+                break;
+        }
         return services;
     }
 }

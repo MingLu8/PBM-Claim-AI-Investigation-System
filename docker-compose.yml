@@ -12,7 +12,7 @@ services:
     entrypoint: [
       "/bin/bash", 
       "-c", 
-      "ollama serve & sleep 5 && ollama pull llama3.2 && wait"
+      "ollama serve & sleep 5 && ollama pull llama4 && wait"
     ]
     restart: unless-stopped
 

@@ -1,5 +1,7 @@
 ﻿using ApiGateway.ChatClients;
 using ApiGateway.Services;
+using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 
@@ -7,8 +9,9 @@ namespace ApiGateway.Plugins;
 
 public sealed class MemoryOptions
 {
-    public bool Enabled { get; set; }
-    public int TopK { get; set; }
+    // Enabled by default so cross-session recall works out of the box; override via the "memory" config section.
+    public bool Enabled { get; set; } = true;
+    public int TopK { get; set; } = 5;
     public double MinScore { get; set; } = 0.20;
 }
 public record SourceRef(string Title, string Excerpt, string Url, double Score);
@@ -108,11 +111,63 @@ public class GeminiEmbedder : IEmbedder
 
 public class InMemoryRagSearch(IEmbedder embedder) : IRagSearch
 {
-    public bool IsEnabled => throw new NotImplementedException();
+    // Embeddings for a given piece of text are stable, so cache them to avoid re-embedding
+    // the same past turns on every recall. (Static for the process; fine for this workload.)
+    private static readonly ConcurrentDictionary<string, float[]> _embeddingCache = new();
 
-    public Task<IEnumerable<RagHit>> SearchAsync(string query, IEnumerable<string> documents, int topK, double minScore, CancellationToken cancellationToken)
+    public bool IsEnabled => embedder.IsEnabled;
+
+    public async Task<IEnumerable<RagHit>> SearchAsync(string query, IEnumerable<string> documents, int topK, double minScore, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        if (!IsEnabled) return Array.Empty<RagHit>();
+
+        var docs = documents as IList<string> ?? documents.ToList();
+        if (docs.Count == 0) return Array.Empty<RagHit>();
+        if (topK <= 0) topK = 5;
+
+        var queryVector = await embedder.EmbedAsync(query, cancellationToken);
+        if (queryVector is null) return Array.Empty<RagHit>();
+
+        var hits = new List<RagHit>(docs.Count);
+        foreach (var doc in docs)
+        {
+            var docVector = await EmbedCachedAsync(doc, cancellationToken);
+            if (docVector is null) continue;
+
+            var score = CosineSimilarity(queryVector, docVector);
+            if (score >= minScore)
+                hits.Add(new RagHit(doc, score));
+        }
+
+        return hits.OrderByDescending(h => h.Score).Take(topK).ToList();
+    }
+
+    private async Task<float[]?> EmbedCachedAsync(string text, CancellationToken cancellationToken)
+    {
+        if (_embeddingCache.TryGetValue(text, out var cached))
+            return cached;
+
+        var vector = await embedder.EmbedAsync(text, cancellationToken);
+        if (vector is not null)
+            _embeddingCache[text] = vector;
+
+        return vector;
+    }
+
+    private static double CosineSimilarity(float[] a, float[] b)
+    {
+        if (a.Length != b.Length || a.Length == 0) return 0;
+
+        double dot = 0, magA = 0, magB = 0;
+        for (var i = 0; i < a.Length; i++)
+        {
+            dot += a[i] * b[i];
+            magA += a[i] * a[i];
+            magB += b[i] * b[i];
+        }
+
+        if (magA == 0 || magB == 0) return 0;
+        return dot / (Math.Sqrt(magA) * Math.Sqrt(magB));
     }
 }
 public class RecallMemoryTool : IAgentTool
@@ -150,33 +205,58 @@ public class RecallMemoryTool : IAgentTool
             {"type": "object", "properties": {"query": {"type":"string", "description":"What to recall."}}, "required":["query"]}
             """));
 
+    // IAgentTool entry point (JSON in / JSON out).
     public async Task<ToolResult> InvokeAsync(JsonElement jsonElement, CancellationToken cancellationToken)
     {
         var query = jsonElement.GetString("query") ?? string.Empty;
+        return new ToolResult(await RecallAsync(query, cancellationToken));
+    }
+
+    // LLM-callable function (registered with AIFunctionFactory). A clean (string query) signature
+    // gives the model a proper "query" parameter, and the JSON string is returned as the tool result.
+    public async Task<string> RecallAsync(
+        [Description("What to recall from this user's earlier conversations.")] string query,
+        CancellationToken cancellationToken)
+    {
+        var snippets = await RecallSnippetsAsync(query, excludeSessionId: null, cancellationToken);
+        var method = _rag.IsEnabled ? "rag" : "keyword";
+        return JsonSerializer.Serialize(new { method, count = snippets.Count, snippets });
+    }
+
+    // Core recall used by both the tool and the chat endpoint's proactive injection.
+    // Flattens every turn across the user's sessions and ranks them by semantic (or keyword) relevance.
+    public async Task<IReadOnlyList<string>> RecallSnippetsAsync(string query, string? excludeSessionId, CancellationToken cancellationToken)
+    {
         if (string.IsNullOrWhiteSpace(query))
-            return new ToolResult("{\"snippets\": []}");
+            return Array.Empty<string>();
 
         var sessions = await _store.GetAllAsync(_currentUser.UserId);
-        var turns = sessions.SelectMany(a => a.History).Select(a => $"{a.Role}: {a.Content}")
+        var turns = sessions
+            .Where(s => excludeSessionId is null || s.Id != excludeSessionId)
+            .SelectMany(s => s.History)
+            .Select(t => $"{t.Role}: {t.Content}")
             .Distinct()
             .ToList();
 
-        if (!turns.Any())
-            return new ToolResult("{\"snippets\": []}");
+        if (turns.Count == 0)
+            return Array.Empty<string>();
 
         if (_rag.IsEnabled)
         {
             var hits = await _rag.SearchAsync(query, turns, _options.TopK, _options.MinScore, cancellationToken);
-            var snippets = hits.Select(a => a.Text).ToList();
+            var snippets = hits.Select(h => h.Text).ToList();
             _logger.LogInformation("[Memory] RAG recall: {Count} hit(s) for '{Query}'", snippets.Count, query);
-            return new ToolResult(JsonSerializer.Serialize(new { method = "rag", count = snippets.Count, snippets }));
+            return snippets;
         }
 
+        // Fallback when no embedder is configured: simple case-insensitive term matching.
         var terms = query.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var keywordHits = turns.Where(a => terms.Any(b => a.ToLowerInvariant().Contains(b)))
-                                .Take(_options.TopK).ToList();
-
-        return new ToolResult(JsonSerializer.Serialize(new { method = "keyword", count = keywordHits.Count, snippets = keywordHits }));
+        var keywordHits = turns
+            .Where(t => terms.Any(term => t.ToLowerInvariant().Contains(term)))
+            .Take(_options.TopK)
+            .ToList();
+        _logger.LogInformation("[Memory] keyword recall: {Count} hit(s) for '{Query}'", keywordHits.Count, query);
+        return keywordHits;
     }
 }
 

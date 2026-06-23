@@ -19,4 +19,7 @@
 	<ItemGroup>
 	  <Folder Include="Abstractions\" />
 	</ItemGroup>
+	<ItemGroup>
+	  <InternalsVisibleTo Include="PBM.Infrastructure.Tests" />
+	</ItemGroup>
 </Project>

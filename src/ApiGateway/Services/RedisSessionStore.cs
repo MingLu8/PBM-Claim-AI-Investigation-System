@@ -16,7 +16,7 @@ namespace ApiGateway.Services
             _db = connection.GetDatabase();
         }
 
-        public Task<bool> ExistsAsync(string id) => _db.KeyExistsAsync(id);
+        public Task<bool> ExistsAsync(string id) => _db.KeyExistsAsync(Key(id));
 
         public async Task<IEnumerable<SessionData>> GetAllAsync(string user)
         {

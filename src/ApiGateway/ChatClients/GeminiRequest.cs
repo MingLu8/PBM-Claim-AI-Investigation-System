@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace ApiGateway.ChatClients;
 
@@ -12,10 +13,56 @@ public sealed class GeminiRequest
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public GeminiContent? SystemInstruction { get; set; }
 
+    // Function declarations exposed to the model. Omitted when no tools are supplied.
+    [JsonPropertyName("tools")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<GeminiTool>? Tools { get; set; }
+
     // Optional: maps from ChatOptions (temperature, max tokens, etc.)
     [JsonPropertyName("generationConfig")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public GeminiGenerationConfig? GenerationConfig { get; set; }
+}
+
+public sealed class GeminiTool
+{
+    [JsonPropertyName("functionDeclarations")]
+    public List<GeminiFunctionDeclaration> FunctionDeclarations { get; set; } = [];
+}
+
+public sealed class GeminiFunctionDeclaration
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("description")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Description { get; set; }
+
+    // OpenAPI-subset JSON schema for the function parameters. Omitted for parameterless tools.
+    [JsonPropertyName("parameters")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public JsonElement? Parameters { get; set; }
+}
+
+public sealed class GeminiFunctionCall
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("args")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public JsonElement? Args { get; set; }
+}
+
+public sealed class GeminiFunctionResponse
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    // Gemini requires this to be a JSON object.
+    [JsonPropertyName("response")]
+    public JsonElement Response { get; set; }
 }
 
 public sealed class GeminiContent
@@ -32,7 +79,18 @@ public sealed class GeminiContent
 public sealed class GeminiPart
 {
     [JsonPropertyName("text")]
-    public string Text { get; set; } = string.Empty;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Text { get; set; }
+
+    // Model -> client: a request to invoke a tool.
+    [JsonPropertyName("functionCall")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public GeminiFunctionCall? FunctionCall { get; set; }
+
+    // Client -> model: the result of a tool invocation.
+    [JsonPropertyName("functionResponse")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public GeminiFunctionResponse? FunctionResponse { get; set; }
 }
 
 public sealed class GeminiGenerationConfig
