@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agentic AI in 3 Days — Dads backend</title>
+<style>
+:root { --navy:#1a1a2e; --teal:#0f857f; --teal-bg:#e8f7f6; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; --code-bg:#0f172a; }
+* { box-sizing:border-box; }
+body { margin:0; background:#f4f5f7; color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; line-height:1.65; }
+.wrap { max-width:860px; margin:0 auto; padding:48px 24px 96px; }
+article { background:#fff; border:1px solid var(--line); border-radius:16px; padding:40px 48px;
+  box-shadow:0 6px 30px rgba(0,0,0,.05); }
+h1 { font-size:2rem; color:var(--navy); line-height:1.2; margin:.2em 0 .4em; }
+h2 { font-size:1.5rem; color:var(--navy); margin-top:2em; padding-bottom:.3em; border-bottom:2px solid var(--teal-bg); }
+h3 { font-size:1.15rem; color:var(--navy); margin-top:1.6em; }
+a { color:var(--teal); text-decoration:none; }
+a:hover { text-decoration:underline; }
+p, li { font-size:1rem; }
+code { font-family:'SF Mono',Consolas,'Liberation Mono',Menlo,monospace; font-size:.88em;
+  background:#eef1f4; color:#9333ea; padding:.12em .4em; border-radius:5px; }
+pre { background:var(--code-bg); color:#e2e8f0; padding:16px 18px; border-radius:10px; overflow:auto; font-size:.85rem; line-height:1.55; }
+pre code { background:none; color:inherit; padding:0; font-size:inherit; }
+blockquote { margin:1.2em 0; padding:14px 18px; background:var(--teal-bg); border-left:4px solid var(--teal);
+  border-radius:0 10px 10px 0; }
+blockquote p { margin:.3em 0; }
+table { border-collapse:collapse; width:100%; margin:1.2em 0; font-size:.92rem; }
+th, td { border:1px solid var(--line); padding:8px 12px; text-align:left; vertical-align:top; }
+th { background:#f9fafb; color:var(--navy); }
+tr:nth-child(even) td { background:#fafbfc; }
+hr { border:none; border-top:1px solid var(--line); margin:2.5em 0; }
+ul, ol { padding-left:1.4em; }
+li { margin:.3em 0; }
+.brandbar { max-width:860px; margin:0 auto; display:flex; align-items:center; gap:12px; padding:0 24px; }
+.logo { width:40px; height:40px; border-radius:10px; background:linear-gradient(135deg,#7c3aed,var(--navy));
+  color:#fff; font-weight:700; font-size:22px; display:grid; place-items:center; }
+.brandbar small { color:var(--muted); }
+html { scroll-behavior: smooth; }
+:target { scroll-margin-top: 14px; }
+.toc { background:#f8fafc; border:1px solid var(--line); border-radius:12px; padding:18px 22px; margin:8px 0 36px; }
+.toc__title { margin:0 0 10px; font-weight:700; color:var(--navy); font-size:.78rem; text-transform:uppercase; letter-spacing:.06em; }
+.toc__link { display:block; color:var(--ink); text-decoration:none; padding:5px 0 5px 12px; font-size:.93rem; border-left:2px solid transparent; transition:border-color .15s,color .15s,padding .15s; }
+.toc__link:hover { color:var(--teal); border-left-color:var(--teal); padding-left:18px; }
+@media (max-width:600px){ article{ padding:24px; } .wrap{ padding:24px 12px 64px; } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brandbar"><span class="logo">🤖</span><div><strong>Dads</strong><br><small>Agentic AI crash course</small></div></div>
+    <article>
+<h1>Agentic AI in 3 Days — using the Dads .NET backend 🤖</h1>
+<p>Welcome! You already have a working <strong>agentic AI service</strong> — the brain behind the <strong>Dads</strong> chat
+assistant. It&#39;s an ASP.NET Core minimal-API app (this repo, <code>PBM-Claim-AI-Investigation-System</code>, project
+<code>src/ApiGateway</code>) that wraps a Large Language Model, gives it <strong>tools</strong> it can call, a <strong>memory</strong> it can
+search, and a <strong>fallback</strong> model when the cloud one fails. Same superpower as the React course: you&#39;re
+learning agents on a real app you can run, not a toy.</p>
+<p><strong>Who this is for:</strong> .NET developers who know C# and REST APIs and want to understand how an LLM agent is
+actually built — no prior AI experience needed.</p>
+<p><strong>How it works:</strong> 3 core days, plus a bonus unit on <strong>local models (Day 3½)</strong> and a hands-on
+<strong>build-it-yourself appendix</strong>. Every concept is shown <strong>in our code</strong>, with a short
+<strong>🔌 plain chatbot → 🤖 agent</strong> translation and a <strong>🛠️ Try it</strong> challenge. Do the challenges — that&#39;s
+where it sticks.</p>
+<p><strong>The golden rule of agentic AI, up front:</strong></p>
+<blockquote>
+<p>An agent is just <strong>an LLM in a loop that you let call your functions.</strong> You describe the tools; the
+<em>model</em> decides which to call, reads the results, and keeps going until it can answer. That&#39;s 80% of it.
+The other 20% is plumbing: messages in, tools registered, results fed back.</p>
+</blockquote>
+<p><strong>Two libraries do the heavy lifting</strong> (both Microsoft, both already referenced):</p>
+<ul>
+<li><strong>Microsoft.Extensions.AI (MEAI)</strong> — a vendor-neutral <code>IChatClient</code> abstraction. &quot;Talk to <em>an</em> LLM&quot;
+without caring whether it&#39;s Gemini, OpenAI, or a local model.</li>
+<li><strong>Microsoft.Agents.AI</strong> — the <code>ChatClientAgent</code> that wraps an <code>IChatClient</code> with instructions + tools and
+runs the <em>tool-calling loop</em> for you.</li>
+</ul>
+<hr>
+<nav class="toc"><p class="toc__title">Contents</p><a class="toc__link" href="#day-0">Day 0 — Setup &amp; the map (15 minutes)</a><a class="toc__link" href="#day-1">Day 1 — The chat client &amp; the agent loop</a><a class="toc__link" href="#day-2">Day 2 — Tools (function calling)</a><a class="toc__link" href="#day-3">Day 3 — Memory, RAG &amp; resilience</a><a class="toc__link" href="#day-3h">Day 3½ — Running a local model with Ollama 🦙</a><a class="toc__link" href="#cheat-sheet">The 60-second &quot;chatbot → agent&quot; cheat sheet</a><a class="toc__link" href="#gotchas">⚠️ The 8 gotchas that bite every agent builder</a><a class="toc__link" href="#appendix">🏗️ Appendix: build the agent yourself, step by step</a><a class="toc__link" href="#next">Where to go next</a></nav>
+
+<h2 id="day-0">Day 0 — Setup &amp; the map (15 minutes)</h2>
+<pre><code class="language-bash">cd PBM-Claim-AI-Investigation-System/src/ApiGateway
+dotnet run            # listens on https://localhost:7293  (Swagger UI at /swagger in Development)
+</code></pre>
+<p>The React front end (sibling <code>dads-react</code> repo) proxies <code>/api</code> here. You can also poke the API directly
+from Swagger. The agent needs an LLM key — set it in <strong>user secrets</strong> (never commit keys):</p>
+<pre><code class="language-bash">dotnet user-secrets set "Gemini:ApiKey" "your-google-ai-key"
+dotnet user-secrets set "Gemini:Model"  "gemini-2.5-flash"
+# optional: a local fallback model (Day 3½) and Redis for sessions
+dotnet user-secrets set "Ollama:Model"  "llama4"
+dotnet user-secrets set "Redis:ConnectionString" "localhost:6379"
+</code></pre>
+<p><strong>Map of the backend</strong> — open these; we&#39;ll refer to them all course long:</p>
+<pre><code>src/ApiGateway/
+├─ Program.cs                       ← bootstrap: DI, Swagger, endpoints, hosted worker
+├─ DependencyResolution.cs          ← THE wiring file: client, agent, tools, embedders
+├─ ChatClients/
+│  ├─ GeminiChatClient.cs           ← an IChatClient over Google Gemini's REST API
+│  ├─ GeminiSettings.cs / GeminiRequest.cs
+│  ├─ OllamaSettings.cs             ← local-model endpoint + model name (fallback)
+│  └─ FallbackChatClient.cs         ← try primary LLM, fall back to Ollama on error
+├─ Tools/
+│  ├─ PharmacyNpiParser.cs          ← tool: extract a Pharmacy NPI from an NCPDP claim
+│  ├─ CardHolderIdParser.cs         ← tool: extract a Member/Cardholder ID
+│  └─ RecallMemoryTool.cs           ← tool + RAG: search the user's past conversations
+├─ Endpoints/
+│  ├─ ChatEndpoint.cs               ← POST /api/chat — orchestrates a turn
+│  └─ SessionEndpoint.cs            ← create/list/get/delete chat sessions
+├─ Services/                        ← ISessionStore (Redis / in-memory), ICurrentUser
+└─ Dtos/                            ← ChatRequest, SessionData, ChatTurn
+</code></pre>
+<blockquote>
+<p><strong>🔌→🤖 Big picture:</strong> A &quot;plain&quot; chatbot endpoint is: take the user&#39;s text, call the LLM once, return
+the text. An <strong>agent</strong> adds three things — a <em>system persona</em> (instructions), <em>tools</em> the model may call,
+and a <em>loop</em> that runs those calls and feeds results back until the model is done. Our <code>ChatClientAgent</code>
+gives you all three; the rest of the app is the tools, memory, and resilience around it.</p>
+</blockquote>
+<hr>
+
+<h2 id="day-1">Day 1 — The chat client &amp; the agent loop</h2>
+<p><strong>Goal:</strong> understand the universal LLM interface (<code>IChatClient</code>), how messages/roles work, and how
+<code>ChatClientAgent</code> turns &quot;one model call&quot; into an autonomous loop.</p>
+
+<h3 id="11-ichatclient">1.1 <code>IChatClient</code> — the universal LLM interface</h3>
+<p>Everything starts with one MEAI interface. You hand it messages; it returns a response:</p>
+<pre><code class="language-csharp">Task&lt;ChatResponse&gt; GetResponseAsync(
+    IEnumerable&lt;ChatMessage&gt; messages,
+    ChatOptions? options = null,
+    CancellationToken cancellationToken = default);
+</code></pre>
+<p>That&#39;s the seam that makes the whole app vendor-neutral: Gemini, OpenAI, or a local Ollama model all
+implement the <em>same</em> <code>IChatClient</code>, so the agent above doesn&#39;t care which one it&#39;s talking to.</p>
+<blockquote>
+<p><strong>🔌→🤖</strong> The old way: a <code>GeminiService</code> with a bespoke <code>AskGemini(string)</code> method, tightly coupled to
+one vendor&#39;s SDK. The agentic way: program against <code>IChatClient</code>; swap providers by swapping the
+registration in DI.</p>
+</blockquote>
+
+<h3 id="12-messages">1.2 Messages &amp; roles — the conversation is a list</h3>
+<p>An LLM is stateless: every call you send the <em>whole</em> conversation as a list of <code>ChatMessage</code>s, each tagged
+with a <strong>role</strong>:</p>
+<table>
+<thead><tr><th>Role</th><th>Who</th><th>Example in our app</th></tr></thead>
+<tbody>
+<tr><td><code>System</code></td><td>instructions / persona</td><td>&quot;You are a PBM assistant… always call the memory tool first.&quot;</td></tr>
+<tr><td><code>User</code></td><td>the human</td><td>&quot;What is my member ID in this claim?&quot;</td></tr>
+<tr><td><code>Assistant</code></td><td>the model</td><td>the reply, <em>or</em> a request to call a tool</td></tr>
+<tr><td><code>Tool</code></td><td>your code&#39;s answer</td><td>the JSON a tool returned, fed back to the model</td></tr>
+</tbody></table>
+<p>Each message carries <code>Contents</code> — not just text, but typed parts like <code>TextContent</code>,
+<code>FunctionCallContent</code> (the model wants to call a tool), and <code>FunctionResultContent</code> (your tool&#39;s output).
+That typed content is what makes tool-calling possible (Day 2).</p>
+
+<h3 id="13-geminiclient">1.3 <code>GeminiChatClient</code> — a real client over REST</h3>
+<p>We didn&#39;t use a vendor SDK; <a href="src/ApiGateway/ChatClients/GeminiChatClient.cs"><code>GeminiChatClient.cs</code></a>
+implements <code>IChatClient</code> directly against Gemini&#39;s HTTP API. The shape:</p>
+<pre><code class="language-csharp">public async Task&lt;ChatResponse&gt; GetResponseAsync(
+    IEnumerable&lt;ChatMessage&gt; messages, ChatOptions? options = null, CancellationToken ct = default)
+{
+    var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
+
+    // Gemini takes the persona in a dedicated "systemInstruction" field, not as a chat turn.
+    var systemParts = new List&lt;string&gt;();
+    if (!string.IsNullOrWhiteSpace(options?.Instructions))     // ← the agent's persona (see deep dive)
+        systemParts.Add(options.Instructions);
+    systemParts.AddRange(messages.Where(m =&gt; m.Role == ChatRole.System).Select(m =&gt; m.Text)...);
+
+    var requestBody = new GeminiRequest {
+        Contents          = BuildContents(messages),           // user/assistant/tool turns → Gemini "contents"
+        SystemInstruction = ...,                               // the merged system text
+        Tools             = BuildTools(options)                // your tools → Gemini function declarations
+    };
+    // POST with x-goog-api-key header, then map the JSON back into a ChatResponse.
+}
+</code></pre>
+<p>The interesting work is the <strong>mapping</strong>: <code>BuildContents</code> converts MEAI messages (including the tool-call
+loop) into Gemini&#39;s format, and <code>BuildChatResponse</code> converts Gemini&#39;s reply back into a <code>ChatResponse</code> with
+either text or <code>FunctionCallContent</code>. You rarely write this yourself (prebuilt clients exist), but reading it
+once demystifies &quot;what actually goes over the wire.&quot;</p>
+
+<h3 id="14-agent">1.4 The agent — instructions + tools + a loop</h3>
+<p>A bare <code>IChatClient</code> answers <em>once</em>. To make it <em>agentic</em>, wrap it in a <code>ChatClientAgent</code>
+(Microsoft.Agents.AI). From <a href="src/ApiGateway/DependencyResolution.cs"><code>DependencyResolution.cs</code></a>:</p>
+<pre><code class="language-csharp">return new ChatClientAgent(
+    chatClient,                                  // the IChatClient (Gemini, with Ollama fallback)
+    name: "PharmacyParserAgent",
+    instructions: """
+        You are a PBM (Pharmacy Benefit Management) assistant.
+        MEMORY: ALWAYS call 'recall_past_conversations' FIRST when the user refers to a past chat…
+        TOOLS: Use extract_pharmacy_npi and extract_cardholder_id to read NCPDP claims…
+        """,
+    tools: new List&lt;AITool&gt;
+    {
+        AIFunctionFactory.Create(npiPlugin.ExtractPharmacyNpi,  name: "extract_pharmacy_npi"),
+        AIFunctionFactory.Create(cardPlugin.ExtractCardholderId, name: "extract_cardholder_id"),
+        AIFunctionFactory.Create(memoryTool.RecallAsync,         name: memoryTool.Definition.FunctionName, ...)
+    });
+</code></pre>
+<p>Now a single <code>await agent.RunAsync(messages)</code> may, under the hood, call the model several times: model
+asks for a tool → the framework runs your C# method → appends the result → calls the model again → repeats
+until the model returns a final answer. <strong>That loop is the agent.</strong></p>
+<blockquote>
+<p><strong>🔌→🤖</strong> Plain chatbot: <code>var reply = await llm.Ask(userText);</code> — one shot, no tools. Agent:
+<code>var reply = await agent.RunAsync(messages);</code> — the model may call your functions any number of times
+before answering. You wrote the tools; the model orchestrates them.</p>
+</blockquote>
+
+<h3 id="dd-loop">💡 Deep dive: what actually makes it &quot;agentic&quot;</h3>
+<p>The magic isn&#39;t the model — it&#39;s the <strong>loop around it</strong>. Concretely, one <code>RunAsync</code> can expand to:</p>
+<ol>
+<li>Send <code>[system, …history…, user]</code> + the tool <em>declarations</em> to the model.</li>
+<li>Model replies with a <code>FunctionCallContent</code>: &quot;call <code>extract_cardholder_id</code> with this payload.&quot;</li>
+<li>The framework finds the matching <code>AITool</code>, invokes your C# method, gets a string back.</li>
+<li>It appends a <code>FunctionResultContent</code> (role <code>Tool</code>) and calls the model <em>again</em>.</li>
+<li>Now the model has the answer and returns final text. Loop ends.</li>
+</ol>
+<p>You never wrote an <code>if (intent == "getMemberId")</code> switch. You registered tools and let the model route.
+That inversion — <em>the model drives control flow</em> — is the whole idea, and also why Day 2 (good tool
+descriptions) and the gotchas (determinism) matter so much.</p>
+
+<h3 id="dd-instructions">💡 Deep dive: where the persona lives — and a real bug</h3>
+<p>The agent&#39;s <code>instructions</code> are not sent as a <code>User</code> message. The framework passes them via
+<strong><code>ChatOptions.Instructions</code></strong> to the <code>IChatClient</code> on every call. Your client has to <em>honor</em> that —
+and a custom client can silently forget to.</p>
+<p>We hit exactly this. <code>GeminiChatClient</code> originally built its <code>systemInstruction</code> only from
+<code>System</code>-<em>role messages</em> and ignored <code>options.Instructions</code> — so the whole PBM persona (&quot;you have
+memory, always call the recall tool…&quot;) never reached Gemini. The symptom: the bot answered like a generic
+&quot;large language model, trained by Google,&quot; with no awareness of its tools or memory. The fix is the merge you
+saw in 1.3:</p>
+<pre><code class="language-csharp">if (!string.IsNullOrWhiteSpace(options?.Instructions))
+    systemParts.Add(options.Instructions);   // ← without this line, the agent's brain is silently dropped
+</code></pre>
+<p><strong>Lesson:</strong> when you implement <code>IChatClient</code> yourself, the agent configures behavior through
+<code>ChatOptions</code> (<code>Instructions</code>, <code>Tools</code>, temperature…). Honor those fields, or the agent above you stops
+working in ways that look like &quot;the model is dumb&quot; rather than &quot;a field was ignored.&quot;</p>
+
+<h3 id="day-1-challenges">🛠️ Day 1 challenges</h3>
+<ol>
+<li>In Swagger, POST <code>/api/session</code> then <code>/api/chat</code> with a simple question. Watch the reply come back.</li>
+<li>Edit the <code>instructions</code> string in <code>DependencyResolution.cs</code> (e.g., make the assistant always answer in
+one sentence). Restart, and see the persona change.</li>
+<li>Read <code>BuildContents</code> in <code>GeminiChatClient.cs</code> and trace how an assistant tool-call and its result map to
+Gemini roles (<code>model</code> vs <code>user</code> + <code>functionResponse</code>).</li>
+</ol>
+<p><strong>Day 1 recap:</strong> <code>IChatClient</code> = talk to any LLM; the conversation is a list of role-tagged messages;
+<code>ChatClientAgent</code> = client + instructions + tools + the tool-calling loop; the persona travels in
+<code>ChatOptions.Instructions</code> — honor it.</p>
+<hr>
+
+<h2 id="day-2">Day 2 — Tools (function calling)</h2>
+<p><strong>Goal:</strong> give the model hands. A <em>tool</em> is just a C# method the model is allowed to call. Today: how a
+method becomes a tool, how its &quot;shape&quot; reaches the model, and the call/result round-trip.</p>
+
+<h3 id="21-tool-method">2.1 A tool is a C# method + <code>[Description]</code></h3>
+<p>Look at <a href="src/ApiGateway/Tools/PharmacyNpiParser.cs"><code>PharmacyNpiParser.cs</code></a> — there is nothing
+&quot;AI&quot; about it. It&#39;s an ordinary method, annotated so the model knows what it does:</p>
+<pre><code class="language-csharp">public class PharmacyNpiParser
+{
+    [Description("Parses a raw NCPDP D0 claim string to extract the 10-digit Pharmacy NPI.")]
+    public string ExtractPharmacyNpi(
+        [Description("The raw NCPDP telecom transaction string")] string ncpdpPayload)
+    {
+        // …find the "201-B1" segment, slice out the 10 digits, return them…
+    }
+}
+</code></pre>
+<p>Those <code>[Description]</code> attributes aren&#39;t documentation for <em>you</em> — they become part of the prompt the model
+reads when deciding whether and how to call the tool (more in the deep dive).</p>
+
+<h3 id="22-aifunctionfactory">2.2 <code>AIFunctionFactory.Create</code> — method → tool</h3>
+<p>One call turns a method (and its <code>[Description]</code>s and parameter types) into an <code>AITool</code> the agent can
+expose. That&#39;s the registration you saw on Day 1:</p>
+<pre><code class="language-csharp">AIFunctionFactory.Create(npiPlugin.ExtractPharmacyNpi,  name: "extract_pharmacy_npi")
+AIFunctionFactory.Create(cardPlugin.ExtractCardholderId, name: "extract_cardholder_id")
+AIFunctionFactory.Create(memoryTool.RecallAsync,         name: "recall_past_conversations", description: ...)
+</code></pre>
+<p>The factory reflects over the method signature to build a <strong>JSON schema</strong> of its parameters. The model
+never sees your C#; it sees <em>name + description + parameter schema</em>, and emits a JSON arguments object
+when it wants to call it.</p>
+<blockquote>
+<p><strong>🔌→🤖</strong> The old way to &quot;route&quot; a request: parse the user text, <code>switch</code> on keywords, call the right
+service. The agentic way: register tools with good descriptions and let the model pick. Adding a capability
+= adding a method, not editing a router.</p>
+</blockquote>
+
+<h3 id="23-schema">2.3 How the schema reaches the model (and Gemini&#39;s quirks)</h3>
+<p>Each provider wants tools in a slightly different shape. <code>GeminiChatClient.BuildTools</code> converts the agent&#39;s
+<code>AITool</code>s into Gemini <em>function declarations</em>, and <code>SanitizeSchema</code> strips JSON-schema keywords Gemini&#39;s
+parser rejects:</p>
+<pre><code class="language-csharp">// Schema keywords Gemini rejects; removed before sending.
+private static readonly HashSet&lt;string&gt; UnsupportedSchemaKeys =
+    new(StringComparer.Ordinal) { "$schema", "additionalProperties" };
+</code></pre>
+<p>You don&#39;t normally hand-write this, but it&#39;s a useful reminder: &quot;function calling&quot; is just <strong>structured JSON
+over the wire</strong>, and each model has rules about what JSON it accepts.</p>
+
+<h3 id="24-roundtrip">2.4 The call/result round-trip</h3>
+<p>When the model decides to use a tool, the response contains a <code>FunctionCallContent</code> (name + arguments).
+The agent loop invokes your method, then sends the answer back as a <code>FunctionResultContent</code>. One Gemini
+wrinkle our client handles: Gemini requires the function <em>response</em> to be a JSON <strong>object</strong>, so
+<code>WrapFunctionResult</code> passes objects through and wraps bare strings as <code>{ "result": "…" }</code>:</p>
+<pre><code class="language-csharp">internal static JsonElement WrapFunctionResult(object? result)
+{
+    var raw = result as string ?? JsonSerializer.Serialize(result);
+    try { using var doc = JsonDocument.Parse(raw);
+          if (doc.RootElement.ValueKind == JsonValueKind.Object) return doc.RootElement.Clone(); }
+    catch (JsonException) { /* not JSON */ }
+    return JsonSerializer.SerializeToElement(new { result = raw });   // wrap non-objects
+}
+</code></pre>
+
+<h3 id="dd-descriptions">💡 Deep dive: tool descriptions ARE prompt — write them for the model</h3>
+<p>The model chooses a tool <em>entirely</em> from its name, description, and parameter descriptions. Vague text →
+the tool gets ignored or misused. Compare our memory tool&#39;s description
+(<a href="src/ApiGateway/Tools/RecallMemoryTool.cs"><code>RecallMemoryTool.cs</code></a>):</p>
+<blockquote>
+<p>&quot;Search THIS user&#39;s earlier conversations for relevant facts. <strong>Call this when</strong> the user references a
+previous chat, uses an entity or pronoun with no antecedent in the current conversation, or asks to continue
+earlier work.&quot;</p>
+</blockquote>
+<p>Notice it tells the model <em>when</em> to call it, not just what it does. That &quot;call this when…&quot; framing is the
+single biggest lever on whether tools actually fire. Treat every <code>[Description]</code> as prompt engineering.</p>
+
+<h3 id="dd-tool-design">💡 Deep dive: keep tools deterministic, cheap, and JSON-shaped</h3>
+<p>Because the <em>model</em> decides when to call a tool — possibly several times in one turn — good tools are:
+<strong>deterministic</strong> (same input → same output; our parsers are pure string slicing), <strong>cheap/fast</strong> (they sit
+inside a latency-sensitive loop), and they <strong>return strings/JSON</strong> the model can read. <code>RecallAsync</code> returns
+<code>JsonSerializer.Serialize(new { method, count, snippets })</code> — compact, structured, easy for the model to use.
+Avoid side effects in tools the model might call speculatively.</p>
+
+<h3 id="day-2-challenges">🛠️ Day 2 challenges</h3>
+<ol>
+<li>Add a new tool: a method <code>GetNdcDescription(string ndc)</code> with <code>[Description]</code>s, register it with
+<code>AIFunctionFactory.Create</code>, and ask the agent &quot;what drug is NDC 00071-0155-23?&quot;</li>
+<li>Weaken a tool&#39;s description to something vague (&quot;does stuff with claims&quot;) and observe the model stop
+calling it. Then restore it.</li>
+<li>Make <code>ExtractPharmacyNpi</code> return a small object instead of a string and watch <code>WrapFunctionResult</code> pass
+it through unwrapped.</li>
+</ol>
+<p><strong>Day 2 recap:</strong> a tool = a C# method + <code>[Description]</code>; <code>AIFunctionFactory.Create</code> turns it into an
+<code>AITool</code> with a JSON schema; the model emits a call, the loop runs it and feeds the result back; descriptions
+are prompt; keep tools deterministic and JSON-shaped.</p>
+<hr>
+
+<h2 id="day-3">Day 3 — Memory, RAG &amp; resilience</h2>
+<p><strong>Goal:</strong> make the agent remember across turns and sessions, and keep working when the cloud LLM fails.</p>
+
+<h3 id="31-two-memories">3.1 Two kinds of memory</h3>
+<p>LLMs are stateless, so &quot;memory&quot; is something <em>you</em> provide:</p>
+<ul>
+<li><strong>In-session history</strong> — replay this conversation&#39;s earlier turns on every call. Cheap, exact.</li>
+<li><strong>Cross-session recall</strong> — search the user&#39;s <em>other</em> conversations for relevant facts and inject them.
+This needs <strong>embeddings + RAG</strong> (3.3).</li>
+</ul>
+
+<h3 id="32-orchestration">3.2 The orchestration — <code>ChatEndpoint</code></h3>
+<p><a href="src/ApiGateway/Endpoints/ChatEndpoint.cs"><code>ChatEndpoint.cs</code></a> is where a turn is assembled. Read it as
+four steps:</p>
+<pre><code class="language-csharp">// 1. Cross-session memory: recall relevant facts and inject them as a System message.
+if (memory.IsEnabled) {
+    var snippets = await memory.RecallSnippetsAsync(userInput, excludeSessionId: sessionId, token);
+    if (snippets.Count &gt; 0)
+        messages.Add(new ChatMessage(ChatRole.System, "Relevant facts recalled…\n" + string.Join("\n", snippets)));
+}
+// 2. Replay THIS session's history for continuity.
+foreach (var turn in history)
+    messages.Add(new ChatMessage(turn.Role == "assistant" ? ChatRole.Assistant : ChatRole.User, turn.Content));
+// 3. The new user message, then run the agent (tools incl. recall remain available to the model).
+messages.Add(new ChatMessage(ChatRole.User, userInput));
+var response = await agent.RunAsync(messages, cancellationToken: token);
+// 4. Persist the exchange so future sessions can recall it.
+history.Add(new ChatTurn("user", userInput));
+history.Add(new ChatTurn("assistant", response.Text));
+await store.SetASync(updated);
+</code></pre>
+<p>So memory is both <em>proactive</em> (step 1 injects facts up front) and <em>agentic</em> (the model can also call
+<code>recall_past_conversations</code> itself mid-loop). Two paths to the same store.</p>
+
+<h3 id="33-embeddings">3.3 Embeddings — turning text into vectors</h3>
+<p>To find &quot;relevant&quot; past turns you compare <em>meaning</em>, not keywords. An <strong>embedding</strong> is a vector (array of
+floats) where similar text lands nearby. Our <code>IEmbedder</code> interface has two real implementations:</p>
+<ul>
+<li><strong><code>GeminiEmbedder</code></strong> — calls Gemini&#39;s <code>embedContent</code> endpoint. High quality, needs an API key/network.</li>
+<li><strong><code>InMemoryEmbedder</code></strong> — a deterministic <em>offline</em> embedder (feature-hashing with FNV-1a, L2-normalized).
+No network, always available — perfect as a fallback and for tests.</li>
+</ul>
+<p>(There&#39;s also an <code>AzureOpenAIEmbedder</code> stub, wired but not yet implemented.) Which one runs is chosen in
+<code>DependencyResolution.cs</code> by the <code>Embeddings:Provider</code> config.</p>
+
+<h3 id="34-rag">3.4 RAG — rank by similarity, inject the top hits</h3>
+<p><strong>Retrieval-Augmented Generation</strong> = retrieve relevant text, then let the model generate with it in context.
+<code>InMemoryRagSearch</code> embeds the query and every candidate turn, scores them by <strong>cosine similarity</strong>, and
+returns the top <code>K</code> above a threshold:</p>
+<pre><code class="language-csharp">var queryVector = await embedder.EmbedAsync(query, ct);
+foreach (var doc in docs) {
+    var score = CosineSimilarity(queryVector, await EmbedCachedAsync(doc, ct));
+    if (score &gt;= minScore) hits.Add(new RagHit(doc, score));
+}
+return hits.OrderByDescending(h =&gt; h.Score).Take(topK);
+</code></pre>
+<p><code>RecallMemoryTool.RecallSnippetsAsync</code> uses this when an embedder is available, and <strong>falls back to simple
+keyword matching</strong> when it isn&#39;t — so recall degrades gracefully instead of breaking.</p>
+<blockquote>
+<p><strong>🔌→🤖</strong> A plain chatbot forgets everything between requests. An agent gets memory by (a) replaying
+history and (b) RAG-searching a vector store and injecting the hits — the same pattern used for &quot;chat over
+your documents.&quot;</p>
+</blockquote>
+
+<h3 id="35-sessions">3.5 Sessions — where history lives</h3>
+<p><code>ISessionStore</code> abstracts persistence. <code>DependencyResolution</code> picks <strong>Redis</strong>
+(<code>RedisSessionStore</code>) when a connection string is configured, else an in-memory store for local dev. The
+front end calls <code>/api/session</code> to get an id, then sends it with every <code>/api/chat</code> — that id is what ties a
+user&#39;s turns into one conversation the agent can replay.</p>
+
+<h3 id="dd-fallback">💡 Deep dive: the fallback pattern — never fully down</h3>
+<p>Cloud LLMs fail: rate limits, outages, a bad key. Our agent stays up via the <strong>decorator</strong> pattern in
+<a href="src/ApiGateway/ChatClients/FallbackChatClient.cs"><code>FallbackChatClient.cs</code></a> — itself an
+<code>IChatClient</code> that wraps two others:</p>
+<pre><code class="language-csharp">public async Task&lt;ChatResponse&gt; GetResponseAsync(IEnumerable&lt;ChatMessage&gt; messages, ChatOptions? o, CancellationToken ct)
+{
+    try { return await _primary.GetResponseAsync(messages, o, ct); }   // Gemini
+    catch (Exception ex) {
+        _logger.LogWarning(ex, "'{Primary}' failed — falling back to '{Fallback}'.", _primaryName, _fallbackName);
+        return await _fallback.GetResponseAsync(messages, o, ct);      // local Ollama
+    }
+}
+</code></pre>
+<p>DI composes it so the agent is handed the fallback client without knowing it: <code>Gemini</code> primary, local
+<code>Ollama</code> secondary. The same idea protects embeddings — <code>FallbackEmbedder</code> picks a working embedder
+<em>once</em> up front (so a conversation never mixes two vector spaces — see gotcha #5). Because both layers are
+just <code>IChatClient</code>/<code>IEmbedder</code>, resilience is composition, not rewrites.</p>
+
+<h3 id="day-3-challenges">🛠️ Day 3 challenges</h3>
+<ol>
+<li>Start a chat, say &quot;my name is Ming,&quot; then in a <em>new</em> session ask &quot;what&#39;s my name?&quot; Watch cross-session
+recall (or the keyword fallback) surface it.</li>
+<li>Set <code>Embeddings:Provider</code> to <code>inmemory</code> and confirm recall still works offline (lower quality, no network).</li>
+<li>Temporarily throw an exception at the top of <code>GeminiChatClient.GetResponseAsync</code> and watch the log show
+the fallback to Ollama (Day 3½ to actually serve it).</li>
+</ol>
+<p><strong>Day 3 recap:</strong> memory = history replay + RAG recall; embeddings turn text into vectors, ranked by cosine
+similarity; <code>ISessionStore</code> persists conversations (Redis/in-memory); resilience is the fallback decorator over
+<code>IChatClient</code>/<code>IEmbedder</code>.</p>
+<hr>
+
+<h2 id="day-3h">Day 3½ — Running a local model with Ollama 🦙</h2>
+<p>The fallback only helps if something&#39;s listening locally. <strong>Ollama</strong> runs open models on your machine and
+exposes an OpenAI-style API the MEAI <code>OllamaChatClient</code> can call.</p>
+<pre><code class="language-bash"># install Ollama (https://ollama.com), then:
+ollama pull llama4        # or any model you like
+ollama serve              # serves http://localhost:11434
+</code></pre>
+<p><a href="src/ApiGateway/ChatClients/OllamaSettings.cs"><code>OllamaSettings.cs</code></a> holds the endpoint and model name;
+<code>DependencyResolution</code> builds an <code>OllamaChatClient</code> from them and hands it to the <code>FallbackChatClient</code> as
+the secondary:</p>
+<pre><code class="language-csharp">public class OllamaSettings
+{
+    public string Endpoint { get; init; } = "http://localhost:11434";
+    public string Model    { get; init; } = "llama4";
+}
+</code></pre>
+<p>Now if Gemini errors, the very same agent — same instructions, same tools — keeps answering from a model on
+your laptop. (Tool-calling quality varies by local model; smaller models may call tools less reliably than
+Gemini.)</p>
+<blockquote>
+<p><strong>🔌→🤖</strong> Because the agent targets <code>IChatClient</code>, &quot;use a different brain&quot; is a one-line DI change, not a
+rewrite. Local models also unlock offline dev and keep sensitive data on-prem.</p>
+</blockquote>
+<p><strong>Day 3½ recap:</strong> Ollama serves local models behind an <code>IChatClient</code>; configured via <code>OllamaSettings</code>;
+wired as the fallback so the agent degrades gracefully instead of going dark.</p>
+<hr>
+
+<h2 id="cheat-sheet">The 60-second &quot;chatbot → agent&quot; cheat sheet</h2>
+<table>
+<thead><tr><th>Plain chatbot / REST mindset</th><th>Agentic AI (this codebase)</th></tr></thead>
+<tbody>
+<tr><td>vendor SDK (<code>GeminiService</code>)</td><td><code>IChatClient</code> (Microsoft.Extensions.AI)</td></tr>
+<tr><td>one <code>Ask(text)</code> call</td><td><code>ChatClientAgent.RunAsync(messages)</code> — a tool-calling loop</td></tr>
+<tr><td>request/response string</td><td>list of role-tagged <code>ChatMessage</code>s (System/User/Assistant/Tool)</td></tr>
+<tr><td>system prompt hardcoded in code</td><td>agent <code>instructions</code> → <code>ChatOptions.Instructions</code></td></tr>
+<tr><td><code>switch</code> on intent, call a service</td><td>register tools; the <em>model</em> picks (<code>AIFunctionFactory.Create</code>)</td></tr>
+<tr><td>a method</td><td>a tool = method + <code>[Description]</code> + JSON schema</td></tr>
+<tr><td>session in a DB row</td><td><code>ISessionStore</code> + history replay (Redis / in-memory)</td></tr>
+<tr><td>keyword search</td><td>embeddings + cosine similarity (RAG)</td></tr>
+<tr><td>SQL <code>LIKE</code></td><td><code>IEmbedder</code> + <code>IRagSearch</code></td></tr>
+<tr><td>try/catch + retry one vendor</td><td>fallback <code>IChatClient</code> (Gemini → local Ollama)</td></tr>
+<tr><td>swap providers = rewrite</td><td>swap providers = change a DI registration</td></tr>
+</tbody></table>
+
+<h2 id="gotchas">⚠️ The 8 gotchas that bite every agent builder</h2>
+<ol>
+<li><strong>Instructions must actually reach the model.</strong> They travel in <code>ChatOptions.Instructions</code>; a custom
+<code>IChatClient</code> that ignores that field silently strips the agent&#39;s brain. <em>(Day 1 deep dive — our real bug.)</em></li>
+<li><strong>Tool descriptions are prompt.</strong> Vague <code>[Description]</code> = the model won&#39;t call the tool, or calls it
+wrong. Say <em>when</em> to use it.</li>
+<li><strong>Each provider has schema rules.</strong> Gemini rejects <code>$schema</code>/<code>additionalProperties</code>; we strip them in
+<code>SanitizeSchema</code>. Tool calling is just structured JSON with provider quirks.</li>
+<li><strong>Tool results need the right shape.</strong> Gemini requires a JSON <em>object</em> response — <code>WrapFunctionResult</code>
+wraps bare strings. Returning the wrong shape breaks the loop.</li>
+<li><strong>Keep one embedding vector space.</strong> Never mix two embedders within a conversation — distances become
+meaningless. <code>FallbackEmbedder</code> chooses once, up front.</li>
+<li><strong>The model drives control flow — so make tools deterministic.</strong> It may call a tool zero, one, or many
+times. Side-effectful or slow tools will hurt; pure/cheap ones shine.</li>
+<li><strong>Session id reuse = memory.</strong> Same <code>sessionId</code> across requests is what lets the backend replay history;
+a fresh id every call means an amnesiac agent.</li>
+<li><strong>Streaming isn&#39;t free.</strong> <code>GeminiChatClient.GetStreamingResponseAsync</code> throws <code>NotImplementedException</code>,
+so streaming paths fall back. Know which methods your client truly supports.</li>
+</ol>
+
+<h2 id="appendix">🏗️ Appendix: build the agent yourself, step by step</h2>
+<p>Want to construct it from scratch? Each step runs and adds one capability. Each links to the day that explains it.</p>
+
+<h3 id="a-step-1">Step 1 — Talk to an LLM through <code>IChatClient</code></h3>
+<p>Reference <code>Microsoft.Extensions.AI</code>. Either implement <code>IChatClient</code> over your provider&#39;s REST API (like
+<code>GeminiChatClient</code>) or use a prebuilt one. Goal: <code>await client.GetResponseAsync(messages)</code> returns text.
+<em>(Day 1)</em></p>
+
+<h3 id="a-step-2">Step 2 — Wrap it in an agent</h3>
+<p>Reference <code>Microsoft.Agents.AI</code>. Create a <code>ChatClientAgent</code> with <code>instructions</code> (the persona) and an empty
+tool list. ✅ <code>agent.RunAsync(messages)</code> answers in character. <em>(Day 1)</em></p>
+
+<h3 id="a-step-3">Step 3 — Give it a tool</h3>
+<p>Write a plain method with <code>[Description]</code> on it and its parameters; register it with
+<code>AIFunctionFactory.Create</code>. ✅ Ask something only the tool can answer and watch it get called. <em>(Day 2)</em></p>
+
+<h3 id="a-step-4">Step 4 — An orchestration endpoint</h3>
+<p>Add a minimal-API <code>POST /api/chat</code> that builds the message list (history + new user turn), calls
+<code>agent.RunAsync</code>, and returns <code>response.Text</code>. ✅ A real chat endpoint. <em>(Day 3)</em></p>
+
+<h3 id="a-step-5">Step 5 — Memory (embeddings + RAG)</h3>
+<p>Add an <code>IEmbedder</code> (start with the offline in-memory one), an <code>IRagSearch</code> that ranks past turns by cosine
+similarity, and inject the top hits as a <code>System</code> message before running the agent. ✅ Cross-session recall.
+<em>(Day 3)</em></p>
+
+<h3 id="a-step-6">Step 6 — Resilience</h3>
+<p>Wrap your primary <code>IChatClient</code> in a <code>FallbackChatClient</code> that catches and retries on a second client
+(local Ollama). ✅ The agent survives a cloud outage. <em>(Day 3 &amp; 3½)</em></p>
+
+<h3 id="a-step-7">Step 7 — Sessions &amp; persistence</h3>
+<p>Add an <code>ISessionStore</code> (in-memory, then Redis) and a <code>/api/session</code> endpoint; thread the <code>sessionId</code>
+through every chat call. 🎉 You&#39;ve built the Dads agent. <em>(Day 3)</em></p>
+<hr>
+
+<h2 id="next">Where to go next</h2>
+<ul>
+<li><strong>Microsoft.Extensions.AI</strong> docs — the <code>IChatClient</code>/<code>IEmbeddingGenerator</code> abstractions and the prebuilt
+provider clients (so you don&#39;t hand-roll REST like <code>GeminiChatClient</code>).</li>
+<li><strong>Microsoft.Agents.AI</strong> — richer agent features: streaming, multi-agent handoff, structured output, and
+<code>ChatClientAgentOptions</code> (chat history providers, context providers).</li>
+<li><strong>Semantic Kernel</strong> — Microsoft&#39;s broader orchestration framework (planners, plugins, vector
+connectors) if you outgrow a single agent.</li>
+<li><strong>Implement <code>AzureOpenAIEmbedder</code></strong> — it&#39;s stubbed in <code>RecallMemoryTool.cs</code>; wiring it up is a great
+exercise in the <code>IEmbedder</code> seam.</li>
+<li><strong>Curious about the UI?</strong> The chat front end has a companion <strong>React crash course</strong> in the
+<code>dads-react</code> repo (<code>REACT-CRASH-COURSE.html</code>).</li>
+</ul>
+<p>Happy hacking! The whole point: an agent is <strong>an LLM + instructions + tools + a loop</strong>, all behind a couple
+of clean interfaces. Everything else — memory, RAG, fallback — is composition around that core. You&#39;ve got a
+real agent to practice on; go add a tool and watch the model reach for it. 🤖</p>
+
+    </article>
+  </div>
+</body>
+</html>

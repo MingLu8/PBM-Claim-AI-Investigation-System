@@ -23,22 +23,23 @@ public class SessionEndpoint : IEndpoint
 
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/session", CreateSessionAsync)
+        var group = app.MapGroup("/api/sessions");
+        group.MapPost("/", CreateSessionAsync)
            .WithName("CreateSession")
            .WithSummary("Create a chat session")
            .WithDescription("Create a chat session.");
 
-        app.MapGet("/api/sessions", GetSessionsAsync)
+        group.MapGet("/", GetSessionsAsync)
            .WithName("GetSessions")
            .WithSummary("Get all chat sessions for user")
            .WithDescription("Get all chat sessions for user.");
 
-        app.MapGet("/api/sessions/{id}", GetSessionAsync)
+        group.MapGet("/{id}", GetSessionAsync)
           .WithName("GetSession")
           .WithSummary("Get chat session by id")
           .WithDescription("Get chat session by id.");
 
-        app.MapDelete("/api/sessions/{id}", DeleteSessionAsync)
+        group.MapDelete("/{id}", DeleteSessionAsync)
           .WithName("DeleteSession")
           .WithSummary("Delete chat session by id")
           .WithDescription("Delete chat session by id.");
@@ -79,7 +80,7 @@ public class SessionEndpoint : IEndpoint
                 var title = firstUser.Length > 60 ? firstUser[..60] + "..." : firstUser;
                 return new SessionSummary(a.Id, title, a.LastAccessAt, a.History.Count());
             }).ToList();
-        return Results.Ok(sessions);
+        return Results.Ok(summaries);
     }
 
     private async Task<IResult> CreateSessionAsync(
