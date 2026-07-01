@@ -19,6 +19,7 @@ public static class DependencyResolution
         var memorySettings = services.AddAppSettings<MemoryOptions>(config, "memory");
         var geminiSettings = services.AddAppSettings<GeminiSettings>(config, "Gemini");
         var ollamaSettings = services.AddAppSettings<OllamaSettings>(config, "Ollama");
+        var agentSettings = services.AddAppSettings<AgentSettings>(config, "Agent");
 
         services.AddSingleton<IConnectionMultiplexer>(sp =>
         {
@@ -65,43 +66,9 @@ public static class DependencyResolution
                 primaryName: "Gemini",
                 fallbackName: $"Ollama ({ollamaSettings.Model})");
         });
-        services.AddScoped(sp =>
-        {
-            var chatClient = sp.GetRequiredService<IChatClient>();
-
-            // Resolve plugins from DI and convert to Tools
-            var npiPlugin = sp.GetRequiredService<PharmacyNpiParser>();
-            var cardPlugin = sp.GetRequiredService<CardHolderIdParser>();
-            var memoryTool = sp.GetRequiredService<RecallMemoryTool>();
-
-            return new ChatClientAgent(
-                chatClient,
-                name: "PharmacyParserAgent",
-                instructions: $"""
-                    You are a PBM (Pharmacy Benefit Management) assistant.
-
-                    MEMORY: Before each message you receive, the system automatically searches this user's past sessions
-                    and injects the results as a MEMORY block in the system context. ALWAYS read that block to answer
-                    questions about past conversations. You DO have memory — never claim otherwise.
-                    - If the MEMORY block contains relevant facts, use them to answer.
-                    - If the MEMORY block says "No relevant facts found", tell the user you couldn't find that
-                      information in their past sessions (do NOT say you have no memory capability).
-                    - You can also call '{memoryTool.Definition.FunctionName}' at any time to search memory with a
-                      different query if the injected context is insufficient.
-
-                    TOOLS: Use extract_pharmacy_npi to identify pharmacy NPI numbers and extract_cardholder_id to
-                    identify member/cardholder IDs from text.
-
-                    KNOWLEDGE: For PBM questions not covered by a tool (e.g. "What is NDC?"), use your general PBM
-                    knowledge to answer.
-                    """,
-                tools: new List<AITool>
-                {
-                    AIFunctionFactory.Create(npiPlugin.ExtractPharmacyNpi, name: "extract_pharmacy_npi"),
-                    AIFunctionFactory.Create(cardPlugin.ExtractCardholderId, name: "extract_cardholder_id"),
-                    AIFunctionFactory.Create(memoryTool.RecallAsync, name: memoryTool.Definition.FunctionName, description: memoryTool.Definition.FunctionDescription)
-                });
-        });
+        // Builds a ChatClientAgent per request for the caller's chosen LLM provider
+        // ("auto" = Gemini→Ollama fallback, "gemini", or "ollama"). See ChatAgentFactory.
+        services.AddScoped<IChatAgentFactory, ChatAgentFactory>();
 
         var embeddingDims = config.GetValue<int?>("Embeddings:Dimensions") ?? 256;
         switch (config["Embeddings:Provider"]?.Trim().ToLowerInvariant())

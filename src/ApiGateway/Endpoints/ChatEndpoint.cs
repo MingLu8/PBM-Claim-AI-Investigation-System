@@ -1,3 +1,4 @@
+using ApiGateway.ChatClients;
 using ApiGateway.Dtos;
 using ApiGateway.Plugins;
 using ApiGateway.Services;
@@ -26,7 +27,7 @@ public class ChatEndpoint : IEndpoint
 
     private async Task<IResult> Chat(
         [FromBody] ChatRequest request,
-        ChatClientAgent agent,
+        IChatAgentFactory agentFactory,
         ISessionStore store,
         ICurrentUser user,
         RecallMemoryTool memory,
@@ -36,6 +37,9 @@ public class ChatEndpoint : IEndpoint
         {
             var userInput = request.ChatMessage.Content ?? string.Empty;
             var userId = user.UserId;
+
+            // Build the agent for the LLM the caller picked ("auto" | "gemini" | "ollama").
+            var agent = agentFactory.Create(request.Provider);
 
             // Resolve (or lazily create) the session this message belongs to.
             var sessionId = request.SessionId == Guid.Empty
